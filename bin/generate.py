@@ -14,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 import re
 from attackcti import attack_client
 import csv
+import subprocess
 
 
 def load_objects(file_path, VERBOSE, REPO_PATH):
@@ -540,11 +541,32 @@ def get_objects(REPO_PATH, OUTPUT_PATH, PRODUCT, VERBOSE):
     objects = compute_objects(objects, PRODUCT, OUTPUT_PATH)
     return objects
 
+def get_mod_times(REPO_PATH):
+    mod_times = dict()
+    for f in sorted(glob.glob(REPO_PATH + "/**", recursive=True)):
+        if f.endswith(".yml") and not f.__contains__("/site-packages/"):
+            x = load_file(f)
+            if not "id" in x:
+                continue
+            r = subprocess.check_output(['git', 'log', '-n', '1', '--pretty=format:%ct', f])
+            mod_times[x['id']] = int(r)
+    return mod_times
+
+def inject_mod_time(mod_times, items):
+    injected_items = []
+    for i in items:
+        item_id = i['id']
+        if item_id in mod_times: 
+            i["mod_date"] = str(datetime.datetime.fromtimestamp(mod_times[item_id]).strftime("%Y-%m-%d"))
+            injected_items.append(i)
+    return injected_items
+
 def main(REPO_PATH, OUTPUT_PATH, PRODUCT, VERBOSE):
 
     TEMPLATE_PATH = path.join(REPO_PATH, 'bin/jinja2_templates')
 
     objects = get_objects(REPO_PATH, OUTPUT_PATH, PRODUCT, VERBOSE)
+    mod_times = get_mod_times(REPO_PATH)
 
     try:
         if VERBOSE:
@@ -557,7 +579,7 @@ def main(REPO_PATH, OUTPUT_PATH, PRODUCT, VERBOSE):
     lookups_path = generate_transforms_conf(objects["lookups"], TEMPLATE_PATH, OUTPUT_PATH)
     lookups_path = generate_collections_conf(objects["lookups"], TEMPLATE_PATH, OUTPUT_PATH)
 
-    detection_path = generate_savedsearches_conf(objects["detections"], objects["response_tasks"], objects["baselines"], objects["deployments"], TEMPLATE_PATH, OUTPUT_PATH)
+    detection_path = generate_savedsearches_conf(inject_mod_time(mod_times, objects["detections"]), inject_mod_time(mod_times, objects["response_tasks"]), inject_mod_time(mod_times, objects["baselines"]), objects["deployments"], TEMPLATE_PATH, OUTPUT_PATH)
 
     story_path = generate_analytic_story_conf(objects["stories"], objects["detections"], objects["response_tasks"], objects["baselines"], TEMPLATE_PATH, OUTPUT_PATH)
 

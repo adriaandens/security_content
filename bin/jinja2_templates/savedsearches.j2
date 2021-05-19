@@ -30,7 +30,7 @@ action.escu.known_false_positives = {{ detection.known_false_positives }}
 action.escu.known_false_positives = None
 {% endif %}
 action.escu.creation_date = {{ detection.date }}
-action.escu.modification_date = {{ detection.date }}
+action.escu.modification_date = {{ detection.mod_date | default(detection.date) }}
 action.escu.confidence = high
 action.escu.full_search_name = ESCU - {{ detection.name }} - Rule
 action.escu.search_type = detection
@@ -109,7 +109,7 @@ action.escu.search_type = support
 action.escu.full_search_name = ESCU - {{ baseline.name }}
 description = {{ baseline.description }}
 action.escu.creation_date = {{ baseline.date }}
-action.escu.modification_date = {{ baseline.date }}
+action.escu.modification_date = {{ baseline.mod_date | default(baseline.date) }}
 {% if baseline.tags.analytic_story is defined %}
 action.escu.analytic_story = {{ baseline.tags.analytic_story | tojson }}
 {% else %}
@@ -160,7 +160,7 @@ action.escu.search_type = investigative
 action.escu.full_search_name = ESCU - {{ response_task.name }} - Response Task
 description = {{ response_task.description }}
 action.escu.creation_date = {{ response_task.date }}
-action.escu.modification_date = {{ response_task.date }}
+action.escu.modification_date = {{ response_task.mod_date | default(response_task.date) }}
 {% if response_task.tags is defined %}
 action.escu.analytic_story = {{ response_task.tags.analytic_story | tojson }}
 {% else %}
